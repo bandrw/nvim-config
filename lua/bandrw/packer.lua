@@ -13,8 +13,15 @@ return require('packer').startup(function(use)
 	  requires = { {'nvim-lua/plenary.nvim'} }
   }
 
+  use {
+    "nvim-treesitter/nvim-treesitter",
+    run = ":TSUpdate",
+  }
+
   use 'nvim-tree/nvim-tree.lua'
 
   use 'nvim-tree/nvim-web-devicons'
+
+  use 'folke/tokyonight.nvim'
 
 end)
