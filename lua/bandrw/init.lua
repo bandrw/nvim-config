@@ -1,3 +1,4 @@
+require("bandrw.common")
 require("bandrw.remap")
 require("bandrw.nvim-tree")
 require("bandrw.colorscheme")
