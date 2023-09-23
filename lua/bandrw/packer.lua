@@ -18,10 +18,16 @@ return require('packer').startup(function(use)
     run = ":TSUpdate",
   }
 
-  use 'nvim-tree/nvim-tree.lua'
-
   use 'nvim-tree/nvim-web-devicons'
 
+  use 'nvim-tree/nvim-tree.lua'
+
   use 'folke/tokyonight.nvim'
+
+  use 'lewis6991/gitsigns.nvim'
+
+  use 'tpope/vim-fugitive'
+
+  use 'sindrets/diffview.nvim'
 
 end)

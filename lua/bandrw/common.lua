@@ -14,3 +14,6 @@ vim.opt.incsearch = true
 vim.opt.termguicolors = true
 
 vim.opt.scrolloff = 8
+
+vim.opt.listchars:append({ space = '·' })
+vim.opt.list = true
