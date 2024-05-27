@@ -6,71 +6,71 @@ vim.g.loaded_netrwPlugin = 1
 vim.opt.termguicolors = true
 
 local function my_on_attach(bufnr)
-  local api = require "nvim-tree.api"
+	local api = require("nvim-tree.api")
 
-  local function opts(desc)
-    return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
-  end
+	local function opts(desc)
+		return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+	end
 
-  local function edit_or_open()
-	  local node = api.tree.get_node_under_cursor()
+	local function edit_or_open()
+		local node = api.tree.get_node_under_cursor()
 
-	  if node.nodes ~= nil then
-		  -- expand or collapse folder
-		  api.node.open.edit()
-	  else
-		  -- open file
-		  api.node.open.edit()
-		  -- Close the tree if file was opened
-		  -- api.tree.close()
-	  end
-  end
+		if node.nodes ~= nil then
+			-- expand or collapse folder
+			api.node.open.edit()
+		else
+			-- open file
+			api.node.open.edit()
+			-- Close the tree if file was opened
+			-- api.tree.close()
+		end
+	end
 
-  -- default mappings
-  api.config.mappings.default_on_attach(bufnr)
+	-- default mappings
+	api.config.mappings.default_on_attach(bufnr)
 
-  -- custom mappings
-  vim.keymap.set("n", "l", edit_or_open, opts("Edit Or Open"))
-  vim.keymap.set("n", "h", api.node.navigate.parent_close, opts("Close"))
-  vim.keymap.set("n", "H", api.tree.collapse_all, opts("Collapse All"))
+	-- custom mappings
+	vim.keymap.set("n", "l", edit_or_open, opts("Edit Or Open"))
+	vim.keymap.set("n", "h", api.node.navigate.parent_close, opts("Close"))
+	vim.keymap.set("n", "H", api.tree.collapse_all, opts("Collapse All"))
 end
 
 -- OR setup with some options
 require("nvim-tree").setup({
-  on_attach = my_on_attach,
-  sort_by = "case_sensitive",
-  view = {
-    width = 30,
-  },
-  renderer = {
-    group_empty = true,
-    icons = {
-      glyphs = {
-        default = "",
-        symlink = "",
-        folder = {
-          arrow_open = "",
-          arrow_closed = "",
-          default = "",
-          open = "",
-          empty = "",
-          empty_open = "",
-          symlink = "",
-          symlink_open = "",
-        },
-        git = {
-          unstaged = "󱏵",
-          staged = "󱈽",
-          unmerged = "",
-          renamed = "➜",
-          untracked = "󱂴",
-          deleted = "",
-          ignored = "",
-        },
-      },
-    },
-  },
-  filters = {
-    dotfiles = false,
-  },
+	on_attach = my_on_attach,
+	sort_by = "case_sensitive",
+	view = {
+		width = 30,
+	},
+	renderer = {
+		group_empty = true,
+		icons = {
+			glyphs = {
+				default = "",
+				symlink = "",
+				folder = {
+					arrow_open = "",
+					arrow_closed = "",
+					default = "",
+					open = "",
+					empty = "",
+					empty_open = "",
+					symlink = "",
+					symlink_open = "",
+				},
+				git = {
+					unstaged = "󱏵",
+					staged = "󱈽",
+					unmerged = "",
+					renamed = "➜",
+					untracked = "󱂴",
+					deleted = "",
+					ignored = "",
+				},
+			},
+		},
+	},
+	filters = {
+		dotfiles = false,
+	},
 })

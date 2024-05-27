@@ -11,5 +11,6 @@ require("bandrw.formatting")
 require("bandrw.linting")
 require("bandrw.lsp")
 require("bandrw.autopairs")
+require("bandrw.smart-backspace")
 
 vim.cmd("language en_US")
