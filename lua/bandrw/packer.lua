@@ -61,4 +61,10 @@ return require("packer").startup(function(use)
 
 	use("stevearc/conform.nvim")
 	use("mfussenegger/nvim-lint")
+
+	use({
+		"ThePrimeagen/harpoon",
+		branch = "harpoon2",
+		requires = { { "nvim-lua/plenary.nvim" } },
+	})
 end)
