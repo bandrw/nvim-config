@@ -17,8 +17,8 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
 	end,
 })
 
-vim.g.python3_host_prog = ".venv/bin/python"
-vim.g.ale_python_pylint_executable = vim.fn.expand(".venv/bin/pylint")
+vim.g.python3_host_prog = "./.venv/bin/python"
+vim.g.ale_python_pylint_executable = vim.fn.expand("./.venv/bin/pylint")
 
-vim.keymap.set("n", "<leader>ll", "mF:%!eslint_d --stdin --fix-to-stdout --stdin-filename %<CR>`F")
-vim.keymap.set("v", "<leader>ll", ":!eslint_d --stdin --fix-to-stdout<CR>gv")
+vim.keymap.set("n", "<C-.>", "mF:%!eslint_d --stdin --fix-to-stdout --stdin-filename %<CR>`F")
+vim.keymap.set("v", "<C-.>", ":!eslint_d --stdin --fix-to-stdout<CR>gv")
