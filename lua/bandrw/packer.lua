@@ -34,6 +34,7 @@ return require("packer").startup(function(use)
 	use("nvim-lualine/lualine.nvim")
 
 	use("nvim-lua/plenary.nvim")
+	use("kkrampis/codex.nvim")
 
 	-- LSP
 	use({

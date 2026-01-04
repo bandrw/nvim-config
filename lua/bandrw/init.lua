@@ -14,6 +14,7 @@ require("bandrw.lsp")
 require("bandrw.autopairs")
 require("bandrw.smart-backspace")
 require("bandrw.harpoon")
+require("bandrw.codex")
 
 vim.cmd("language en_US")
 vim.cmd("lang en_US.UTF-8")

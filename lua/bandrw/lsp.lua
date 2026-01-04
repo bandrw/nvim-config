@@ -1,17 +1,27 @@
-local lsp = require("lsp-zero")
-
-lsp.preset("recommended")
-
 local cmp = require("cmp")
-local cmp_action = require("lsp-zero").cmp_action()
+local cmp_nvim_lsp = require("cmp_nvim_lsp")
+local luasnip = require("luasnip")
 
 cmp.setup({
+	snippet = {
+		expand = function(args)
+			luasnip.lsp_expand(args.body)
+		end,
+	},
 	sources = {
 		{ name = "nvim_lsp" },
 	},
 	mapping = cmp.mapping.preset.insert({
-		["<C-f>"] = cmp_action.luasnip_jump_forward(),
-		["<C-b>"] = cmp_action.luasnip_jump_backward(),
+		["<C-f>"] = cmp.mapping(function()
+			if luasnip.jumpable(1) then
+				luasnip.jump(1)
+			end
+		end, { "i", "s" }),
+		["<C-b>"] = cmp.mapping(function()
+			if luasnip.jumpable(-1) then
+				luasnip.jump(-1)
+			end
+		end, { "i", "s" }),
 		["<C-k>"] = cmp.mapping.select_prev_item({ behavior = "select" }),
 		["<C-j>"] = cmp.mapping.select_next_item({ behavior = "select" }),
 		["<C-p>"] = cmp.mapping(function()
@@ -35,30 +45,31 @@ cmp.setup({
 	}),
 })
 
-lsp.on_attach(function(client, bufnr)
-	lsp.default_keymaps({ buffer = bufnr })
+local function on_attach(_, bufnr)
+	local opts = { noremap = true, silent = true, buffer = bufnr }
 
-	-- Add keybinding for code actions
-	local opts = { noremap = true, silent = true }
+	vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+	vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
+	vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
+	vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
+	vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+	vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
 	vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
-end)
+end
 
-require("lspconfig").eslint.setup({
-	single_file_support = false,
-	on_attach = function(client, bufnr)
-	end,
+vim.lsp.config("*", {
+	capabilities = cmp_nvim_lsp.default_capabilities(),
+	on_attach = on_attach,
+})
+
+vim.lsp.config("eslint", {
+	workspace_required = true,
 })
 
 require("mason").setup({})
 require("mason-lspconfig").setup({
 	ensure_installed = {},
-	handlers = {
-		function(server_name)
-			require("lspconfig")[server_name].setup({
-				on_attach = lsp.on_attach,
-			})
-		end,
-	},
+	automatic_enable = true,
 })
 
 vim.keymap.set("n", "<C-O>", function()
