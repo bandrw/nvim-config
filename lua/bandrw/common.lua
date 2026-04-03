@@ -1,3 +1,16 @@
+local nvm_dir = vim.fn.expand("~/.nvm")
+local alias_file = nvm_dir .. "/alias/default"
+if vim.uv.fs_stat(alias_file) then
+	local version = vim.trim(vim.fn.readfile(alias_file)[1])
+	if not version:match("^v") then
+		version = "v" .. version
+	end
+	local node_bin = nvm_dir .. "/versions/node/" .. version .. "/bin"
+	if vim.fn.isdirectory(node_bin) == 1 then
+		vim.env.PATH = node_bin .. ":" .. vim.env.PATH
+	end
+end
+
 vim.opt.nu = true
 vim.opt.relativenumber = true
 

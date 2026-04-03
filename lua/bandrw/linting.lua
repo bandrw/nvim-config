@@ -20,5 +20,20 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
 vim.g.python3_host_prog = "./.venv/bin/python"
 vim.g.ale_python_pylint_executable = vim.fn.expand("./.venv/bin/pylint")
 
-vim.keymap.set("n", "<C-.>", "mF:%!eslint_d --stdin --fix-to-stdout --stdin-filename %<CR>`F")
-vim.keymap.set("v", "<C-.>", ":!eslint_d --stdin --fix-to-stdout<CR>gv")
+vim.keymap.set("n", "<C-.>", function()
+	local bufnr = vim.api.nvim_get_current_buf()
+	local clients = vim.lsp.get_clients({ bufnr = bufnr, name = "eslint" })
+	if #clients == 0 then
+		vim.notify("ESLint LSP not attached", vim.log.levels.WARN)
+		return
+	end
+	clients[1]:request("workspace/executeCommand", {
+		command = "eslint.applyAllFixes",
+		arguments = {
+			{
+				uri = vim.uri_from_bufnr(bufnr),
+				version = vim.lsp.util.buf_versions[bufnr],
+			},
+		},
+	}, nil, bufnr)
+end)
