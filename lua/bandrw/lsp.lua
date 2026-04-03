@@ -1,6 +1,34 @@
 local cmp = require("cmp")
 local cmp_nvim_lsp = require("cmp_nvim_lsp")
 local luasnip = require("luasnip")
+local capabilities = cmp_nvim_lsp.default_capabilities()
+
+local function goto_definitions()
+	if #vim.lsp.get_clients({ bufnr = 0 }) == 0 then
+		vim.notify("No LSP attached in this buffer", vim.log.levels.WARN)
+		return
+	end
+
+	local ok, telescope_builtin = pcall(require, "telescope.builtin")
+	if ok then
+		telescope_builtin.lsp_definitions({ reuse_win = true })
+		return
+	end
+
+	vim.lsp.buf.definition()
+end
+
+local function set_lsp_keymaps(bufnr)
+	local opts = { noremap = true, silent = true, buffer = bufnr }
+
+	vim.keymap.set("n", "gd", goto_definitions, opts)
+	vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
+	vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
+	vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
+	vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+	vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+	vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
+end
 
 cmp.setup({
 	snippet = {
@@ -46,29 +74,43 @@ cmp.setup({
 })
 
 local function on_attach(_, bufnr)
-	local opts = { noremap = true, silent = true, buffer = bufnr }
-
-	vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-	vim.keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
-	vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
-	vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
-	vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
-	vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
-	vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts)
+	set_lsp_keymaps(bufnr)
 end
 
 vim.lsp.config("*", {
-	capabilities = cmp_nvim_lsp.default_capabilities(),
+	capabilities = capabilities,
 	on_attach = on_attach,
+})
+
+vim.api.nvim_create_autocmd("LspAttach", {
+	group = vim.api.nvim_create_augroup("bandrw-lsp-keys", { clear = true }),
+	callback = function(args)
+		set_lsp_keymaps(args.buf)
+	end,
 })
 
 vim.lsp.config("eslint", {
 	workspace_required = true,
 })
 
+vim.lsp.config("pyright", {
+	capabilities = capabilities,
+	on_attach = on_attach,
+	root_markers = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git" },
+	settings = {
+		python = {
+			analysis = {
+				autoSearchPaths = true,
+				useLibraryCodeForTypes = true,
+				diagnosticMode = "workspace",
+			},
+		},
+	},
+})
+
 require("mason").setup({})
 require("mason-lspconfig").setup({
-	ensure_installed = {},
+	ensure_installed = { "pyright" },
 	automatic_enable = true,
 })
 
