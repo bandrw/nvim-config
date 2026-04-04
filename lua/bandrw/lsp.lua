@@ -77,16 +77,19 @@ local function on_attach(_, bufnr)
 	set_lsp_keymaps(bufnr)
 end
 
+local pyright_settings = {
+	python = {
+		analysis = {
+			autoSearchPaths = true,
+			useLibraryCodeForTypes = true,
+			diagnosticMode = "workspace",
+		},
+	},
+}
+
 vim.lsp.config("*", {
 	capabilities = capabilities,
 	on_attach = on_attach,
-})
-
-vim.api.nvim_create_autocmd("LspAttach", {
-	group = vim.api.nvim_create_augroup("bandrw-lsp-keys", { clear = true }),
-	callback = function(args)
-		set_lsp_keymaps(args.buf)
-	end,
 })
 
 vim.lsp.config("eslint", {
@@ -97,20 +100,20 @@ vim.lsp.config("pyright", {
 	capabilities = capabilities,
 	on_attach = on_attach,
 	root_markers = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git" },
-	settings = {
-		python = {
-			analysis = {
-				autoSearchPaths = true,
-				useLibraryCodeForTypes = true,
-				diagnosticMode = "workspace",
-			},
-		},
-	},
+	settings = pyright_settings,
 })
 
+vim.api.nvim_create_autocmd("LspAttach", {
+	group = vim.api.nvim_create_augroup("bandrw-lsp-keys", { clear = true }),
+	callback = function(args)
+		set_lsp_keymaps(args.buf)
+	end,
+})
+
+local can_install_pyright = vim.fn.executable("npm") == 1
 require("mason").setup({})
 require("mason-lspconfig").setup({
-	ensure_installed = { "pyright" },
+	ensure_installed = can_install_pyright and { "pyright" } or {},
 	automatic_enable = true,
 })
 
