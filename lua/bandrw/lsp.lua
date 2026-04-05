@@ -1,7 +1,23 @@
 local cmp = require("cmp")
 local cmp_nvim_lsp = require("cmp_nvim_lsp")
 local luasnip = require("luasnip")
-local capabilities = cmp_nvim_lsp.default_capabilities()
+
+local base_capabilities = vim.lsp.protocol.make_client_capabilities()
+local capabilities = vim.tbl_deep_extend("force", base_capabilities, cmp_nvim_lsp.default_capabilities())
+
+local default_hover_handler = vim.lsp.handlers.hover
+vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
+	if result and type(result.contents) == "table" and result.contents.kind == "plaintext" then
+		local value = result.contents.value or ""
+		if value:find("```", 1, true) then
+			local markdown_result = vim.deepcopy(result)
+			markdown_result.contents = { kind = "markdown", value = value }
+			return default_hover_handler(err, markdown_result, ctx, config)
+		end
+	end
+
+	return default_hover_handler(err, result, ctx, config)
+end
 
 local function goto_definitions()
 	if #vim.lsp.get_clients({ bufnr = 0 }) == 0 then
