@@ -11,7 +11,11 @@ end
 -- Neovim 0.12 can provide quantified captures as node lists in query directives.
 -- nvim-treesitter's legacy directives assume a single TSNode and may crash.
 do
+	-- Ensure upstream directives are registered first, then override them safely.
+	pcall(require, "nvim-treesitter.query_predicates")
+
 	local query = vim.treesitter.query
+	local directive_opts = vim.fn.has("nvim-0.10") == 1 and { force = true, all = false } or true
 
 	local function is_tsnode(value)
 		if type(value) ~= "userdata" then
@@ -76,7 +80,7 @@ do
 			local parts = vim.split(type_attr_value, "/", {})
 			metadata["injection.language"] = parts[#parts]
 		end
-	end, { force = true })
+	end, directive_opts)
 
 	query.add_directive("set-lang-from-info-string!", function(match, _, bufnr, pred, metadata)
 		local injection_alias = get_node_text(match[pred[2]], bufnr):lower()
@@ -84,7 +88,7 @@ do
 			return
 		end
 		metadata["injection.language"] = get_parser_from_markdown_info_string(injection_alias)
-	end, { force = true })
+	end, directive_opts)
 
 	query.add_directive("downcase!", function(match, _, bufnr, pred, metadata)
 		local id = pred[2]
@@ -93,7 +97,7 @@ do
 			metadata[id] = {}
 		end
 		metadata[id].text = string.lower(text)
-	end, { force = true })
+	end, directive_opts)
 end
 
 configs.setup({
@@ -110,7 +114,19 @@ configs.setup({
 	highlight = {
 		enable = true,
 		disable = function(_, buf)
-			return vim.bo[buf].buftype == "nofile"
+			local bt = vim.bo[buf].buftype
+			if bt ~= "nofile" then
+				return false
+			end
+
+			local ft = vim.bo[buf].filetype
+			if ft == "TelescopePrompt" then
+				return true
+			end
+
+			-- Keep treesitter enabled for nofile buffers backed by real paths
+			-- (such as Telescope previews), and disable only scratch-style buffers.
+			return vim.api.nvim_buf_get_name(buf) == ""
 		end,
 		additional_vim_regex_highlighting = false,
 	},

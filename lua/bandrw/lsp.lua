@@ -19,19 +19,143 @@ vim.lsp.handlers["textDocument/hover"] = function(err, result, ctx, config)
 	return default_hover_handler(err, result, ctx, config)
 end
 
+local function get_location_uri(location)
+	return location.uri or location.targetUri
+end
+
+local function get_location_start(location)
+	if location.range and location.range.start then
+		return location.range.start
+	end
+
+	if location.targetSelectionRange and location.targetSelectionRange.start then
+		return location.targetSelectionRange.start
+	end
+
+	if location.targetRange and location.targetRange.start then
+		return location.targetRange.start
+	end
+
+	return nil
+end
+
+local function is_node_modules_location(location)
+	local uri = get_location_uri(location)
+	if not uri then
+		return false
+	end
+
+	local path = vim.uri_to_fname(uri)
+	return path:find("/node_modules/", 1, true) ~= nil
+end
+
+local function get_position_encoding(bufnr)
+	local clients = vim.lsp.get_clients({ bufnr = bufnr, method = "textDocument/definition" })
+	if #clients == 0 then
+		clients = vim.lsp.get_clients({ bufnr = bufnr })
+	end
+
+	return clients[1] and clients[1].offset_encoding or "utf-16"
+end
+
+local function collect_definition_locations(bufnr)
+	local params = vim.lsp.util.make_position_params(0, get_position_encoding(bufnr))
+	local responses = vim.lsp.buf_request_sync(bufnr, "textDocument/definition", params, 1000) or {}
+	local entries = {}
+	local seen = {}
+
+	for client_id, response in pairs(responses) do
+		local result = response and response.result
+		local client = vim.lsp.get_client_by_id(client_id)
+		local locations = {}
+
+		if result then
+			if vim.islist(result) then
+				locations = result
+			else
+				locations = { result }
+			end
+		end
+
+		for _, location in ipairs(locations) do
+			local uri = get_location_uri(location)
+			local start = get_location_start(location)
+			if uri and start then
+				local key = string.format("%s:%d:%d", uri, start.line, start.character)
+				if not seen[key] then
+					seen[key] = true
+					table.insert(entries, {
+						location = location,
+						offset_encoding = client and client.offset_encoding or "utf-16",
+					})
+				end
+			end
+		end
+	end
+
+	return entries
+end
+
+local function entries_to_qf_items(entries)
+	local items = {}
+	local grouped_locations = {}
+
+	for _, entry in ipairs(entries) do
+		local key = entry.offset_encoding
+		if not grouped_locations[key] then
+			grouped_locations[key] = {}
+		end
+		table.insert(grouped_locations[key], entry.location)
+	end
+
+	for offset_encoding, locations in pairs(grouped_locations) do
+		vim.list_extend(items, vim.lsp.util.locations_to_items(locations, offset_encoding))
+	end
+
+	return items
+end
+
 local function goto_definitions()
-	if #vim.lsp.get_clients({ bufnr = 0 }) == 0 then
+	local bufnr = vim.api.nvim_get_current_buf()
+	if #vim.lsp.get_clients({ bufnr = bufnr }) == 0 then
 		vim.notify("No LSP attached in this buffer", vim.log.levels.WARN)
 		return
 	end
 
-	local ok, telescope_builtin = pcall(require, "telescope.builtin")
-	if ok then
-		telescope_builtin.lsp_definitions({ reuse_win = true })
+	local entries = collect_definition_locations(bufnr)
+	if #entries == 0 then
+		vim.notify("No definition found", vim.log.levels.INFO)
 		return
 	end
 
-	vim.lsp.buf.definition()
+	local preferred = {}
+	local fallback = {}
+
+	for _, entry in ipairs(entries) do
+		if is_node_modules_location(entry.location) then
+			table.insert(fallback, entry)
+		else
+			table.insert(preferred, entry)
+		end
+	end
+
+	local active_entries = #preferred > 0 and preferred or fallback
+
+	if #active_entries == 1 then
+		vim.lsp.util.jump_to_location(active_entries[1].location, active_entries[1].offset_encoding, true)
+		return
+	end
+
+	local items = entries_to_qf_items(active_entries)
+	vim.fn.setqflist({}, " ", { title = "LSP definitions", items = items })
+
+	local ok, telescope_builtin = pcall(require, "telescope.builtin")
+	if ok then
+		telescope_builtin.quickfix({ reuse_win = true })
+		return
+	end
+
+	vim.cmd("copen")
 end
 
 local function set_lsp_keymaps(bufnr)

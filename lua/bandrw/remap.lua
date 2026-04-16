@@ -1,9 +1,13 @@
 vim.g.mapleader = " " 
 
 local opts = { noremap = true, silent = true }
+local article_editing = require("bandrw.article-editing")
+
+article_editing.setup()
 
 -- nvim-tree
 vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>")
+vim.keymap.set("n", "<leader>w", article_editing.toggle, { desc = "Toggle article editing" })
 
 -- Better window navigation
 vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
