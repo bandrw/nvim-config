@@ -10,6 +10,10 @@ local movement_keys = {
 	l = "l",
 }
 
+local function remove_auto_break_flags(formatoptions)
+	return formatoptions:gsub("[tac]", "")
+end
+
 local function enable_buffer_mappings(buf)
 	if vim.b[buf].article_editing_mappings_enabled then
 		return
@@ -41,12 +45,12 @@ local function enable_buffer_settings(buf)
 		vim.b[buf].article_editing_buffer_settings = {
 			textwidth = vim.bo[buf].textwidth,
 			formatoptions = vim.bo[buf].formatoptions,
+			wrapmargin = vim.bo[buf].wrapmargin,
 		}
 
-		vim.bo[buf].textwidth = MAX_WIDTH
-		if not vim.bo[buf].formatoptions:find("t", 1, true) then
-			vim.bo[buf].formatoptions = vim.bo[buf].formatoptions .. "t"
-		end
+		vim.bo[buf].textwidth = 0
+		vim.bo[buf].formatoptions = remove_auto_break_flags(vim.bo[buf].formatoptions)
+		vim.bo[buf].wrapmargin = 0
 
 		enable_buffer_mappings(buf)
 	end
@@ -65,6 +69,7 @@ local function disable_buffer_settings(buf)
 		if saved then
 			vim.bo[buf].textwidth = saved.textwidth
 			vim.bo[buf].formatoptions = saved.formatoptions
+			vim.bo[buf].wrapmargin = saved.wrapmargin
 		end
 
 		vim.b[buf].article_editing_buffer_settings = nil
