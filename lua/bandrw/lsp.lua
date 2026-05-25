@@ -227,6 +227,57 @@ local pyright_settings = {
 	},
 }
 
+local eslint_root_markers = {
+	"eslint.config.js",
+	"eslint.config.cjs",
+	"eslint.config.mjs",
+	"eslint.config.ts",
+	".eslintrc",
+	".eslintrc.js",
+	".eslintrc.cjs",
+	".eslintrc.json",
+	"configs/eslint.config.mjs",
+}
+
+local function resolve_eslint_root(bufnr)
+	if vim.fs.root(bufnr, { "deno.json", "deno.jsonc", "deno.lock" }) then
+		return nil
+	end
+
+	local filename = vim.api.nvim_buf_get_name(bufnr)
+	if filename == "" then
+		return nil
+	end
+
+	local project_root = vim.fs.root(bufnr, {
+		{ "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "bun.lock" },
+		{ ".git" },
+	}) or vim.fs.root(bufnr, { ".git" })
+
+	if not project_root then
+		return nil
+	end
+
+	local config_file = vim.fs.find(eslint_root_markers, {
+		path = filename,
+		type = "file",
+		limit = 1,
+		upward = true,
+		stop = vim.fs.dirname(project_root),
+	})[1]
+
+	if config_file then
+		return project_root
+	end
+
+	local nested_config = vim.fs.joinpath(project_root, "configs", "eslint.config.mjs")
+	if vim.uv.fs_stat(nested_config) then
+		return project_root
+	end
+
+	return nil
+end
+
 vim.lsp.config("*", {
 	capabilities = capabilities,
 	on_attach = on_attach,
@@ -234,6 +285,32 @@ vim.lsp.config("*", {
 
 vim.lsp.config("eslint", {
 	workspace_required = true,
+	root_dir = function(bufnr, on_dir)
+		local root = resolve_eslint_root(bufnr)
+		if root then
+			on_dir(root)
+		end
+	end,
+	before_init = function(_, config)
+		local root_dir = config.root_dir
+		if not root_dir then
+			return
+		end
+
+		config.settings = config.settings or {}
+		config.settings.workspaceFolder = {
+			uri = root_dir,
+			name = vim.fn.fnamemodify(root_dir, ":t"),
+		}
+
+		local nested_config = vim.fs.joinpath(root_dir, "configs", "eslint.config.mjs")
+		if vim.uv.fs_stat(nested_config) then
+			config.settings.experimental = config.settings.experimental or {}
+			config.settings.experimental.useFlatConfig = true
+			config.settings.options = config.settings.options or {}
+			config.settings.options.overrideConfigFile = nested_config
+		end
+	end,
 })
 
 vim.lsp.config("pyright", {
@@ -243,6 +320,9 @@ vim.lsp.config("pyright", {
 	settings = pyright_settings,
 })
 
+vim.lsp.enable("eslint")
+vim.lsp.enable("pyright")
+
 vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("bandrw-lsp-keys", { clear = true }),
 	callback = function(args)
@@ -250,10 +330,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	end,
 })
 
-local can_install_pyright = vim.fn.executable("npm") == 1
+local can_install_node_servers = vim.fn.executable("npm") == 1
 require("mason").setup({})
 require("mason-lspconfig").setup({
-	ensure_installed = can_install_pyright and { "pyright" } or {},
+	ensure_installed = can_install_node_servers and { "pyright", "eslint" } or {},
 	automatic_enable = true,
 })
 
