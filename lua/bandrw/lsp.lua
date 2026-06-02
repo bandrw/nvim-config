@@ -142,7 +142,10 @@ local function goto_definitions()
 	local active_entries = #preferred > 0 and preferred or fallback
 
 	if #active_entries == 1 then
-		vim.lsp.util.jump_to_location(active_entries[1].location, active_entries[1].offset_encoding, true)
+		vim.lsp.util.show_document(active_entries[1].location, active_entries[1].offset_encoding, {
+			reuse_win = true,
+			focus = true,
+		})
 		return
 	end
 
@@ -278,9 +281,40 @@ local function resolve_eslint_root(bufnr)
 	return nil
 end
 
+local typescript_root_markers = {
+	{ "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lockb", "bun.lock" },
+	{ ".git" },
+}
+
+local function resolve_typescript_root(bufnr)
+	if vim.fs.root(bufnr, { "deno.json", "deno.jsonc", "deno.lock" }) then
+		return nil
+	end
+
+	return vim.fs.root(bufnr, typescript_root_markers) or vim.fn.getcwd()
+end
+
 vim.lsp.config("*", {
 	capabilities = capabilities,
 	on_attach = on_attach,
+})
+
+vim.lsp.config("ts_ls", {
+	root_dir = function(bufnr, on_dir)
+		local root = resolve_typescript_root(bufnr)
+		if root then
+			on_dir(root)
+		end
+	end,
+})
+
+vim.lsp.config("vtsls", {
+	root_dir = function(bufnr, on_dir)
+		local root = resolve_typescript_root(bufnr)
+		if root then
+			on_dir(root)
+		end
+	end,
 })
 
 vim.lsp.config("eslint", {
@@ -333,7 +367,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 local can_install_node_servers = vim.fn.executable("npm") == 1
 require("mason").setup({})
 require("mason-lspconfig").setup({
-	ensure_installed = can_install_node_servers and { "pyright", "eslint" } or {},
+	ensure_installed = can_install_node_servers and { "pyright", "eslint", "ts_ls" } or {},
 	automatic_enable = true,
 })
 
